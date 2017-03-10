@@ -1,10 +1,17 @@
 package com.udacity.stockhawk.ui;
 
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+
 import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
@@ -28,6 +35,8 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import timber.log.Timber;
 
+import static com.udacity.stockhawk.R.id.symbol;
+
 public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>,
         SwipeRefreshLayout.OnRefreshListener,
         StockAdapter.StockAdapterOnClickHandler {
@@ -45,8 +54,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     private StockAdapter adapter;
 
     @Override
-    public void onClick(String symbol) {
+    public void onClick(Intent intent) {
         Timber.d("Symbol clicked: %s", symbol);
+        startActivity(intent);
     }
 
     @Override
@@ -147,6 +157,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             error.setVisibility(View.GONE);
         }
         adapter.setCursor(data);
+        displayBadStocks(this);
     }
 
 
@@ -161,8 +172,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         if (PrefUtils.getDisplayMode(this)
                 .equals(getString(R.string.pref_display_mode_absolute_key))) {
             item.setIcon(R.drawable.ic_percentage);
+            item.setTitle(getString(R.string.display_mode_percent_desc));
         } else {
             item.setIcon(R.drawable.ic_dollar);
+            item.setTitle(getString(R.string.display_mode_dollar_desc));
         }
     }
 
@@ -185,5 +198,24 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void displayBadStocks(Context context) {
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
+        Set<String> badStocks = sp.getStringSet("badstock", new HashSet<String>());
+
+        if(!badStocks.isEmpty()) {
+            String out = "";
+            for (String stock : badStocks) {
+                out = out.concat(" ");
+                out = out.concat(stock);
+                PrefUtils.removeStock(this, stock);
+            }
+
+            Toast.makeText(this,
+                    String.format(getString(R.string.toast_stock_does_not_exist), out),
+                    Toast.LENGTH_LONG)
+                    .show();
+        }
     }
 }
